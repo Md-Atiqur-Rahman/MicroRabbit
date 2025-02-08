@@ -19,46 +19,35 @@ public sealed class RabbitmqBus : IEventBus
     public RabbitmqBus(IMediator mediator)
     {
         _mediator = mediator;
-        _handlers = new Dictionary<string, List<Type>>(); 
-        _eventTypes = new List<Type>(); 
+        _handlers = new Dictionary<string, List<Type>>();
+        _eventTypes = new List<Type>();
     }
     public Task SendCommand<T>(T command) where T : Command
     {
         return _mediator.Send(command);
     }
 
-    public void Publish<T>(T @event) where T : Event
+    public async Task Publish<T>(T @event) where T : Event
     {
-        var factory = new ConnectionFactory();
-        factory.HostName = "localhost";
+        var factory = new ConnectionFactory { HostName = "localhost" };
+        var connection = await factory.CreateConnectionAsync();
+        var channel = await connection.CreateChannelAsync();
 
-        using (var connection = factory.CreateConnection())
-        using (var channel = connection.CreateModel())
-        {
-            var eventName = @event.GetType().Name;
+        var eventName = @event.GetType().Name;
 
-            channel.QueueDeclare(
-                queue: eventName, 
-                durable: false, 
-                exclusive: false, 
-                autoDelete: false,
-                arguments: null
-            );
-            var serializedMessage = JsonConvert.SerializeObject(@event);
-            var messageBody = Encoding.UTF8.GetBytes(serializedMessage);
+        await channel.QueueDeclareAsync(eventName, false, false, false, null);
 
-            channel.BasicPublish(
-                exchange: "", 
-                routingKey: eventName, 
-                basicProperties: null, 
-                body: messageBody
-            );
-        }
+        var message = JsonConvert.SerializeObject(@event);
+        var body = Encoding.UTF8.GetBytes(message);
+
+        await channel.BasicPublishAsync(exchange: string.Empty, routingKey: eventName, body: body);
+        //await channel.BasicPublishAsync(eventName, null, body);
+
     }
 
-    public void Subscribe<T, TH>()
-        where T : Event
-        where TH : IEventHandler<T>
+    public async Task Subscribe<T, TH>()
+             where T : Event
+             where TH : IEventHandler<T>
     {
         var eventName = typeof(T).Name;
         var handlerType = typeof(TH);
@@ -73,54 +62,44 @@ public sealed class RabbitmqBus : IEventBus
             _handlers.Add(eventName, new List<Type>());
         }
 
-        if (_handlers[eventName].Any(x=>x.GetType()== handlerType))
+        if (_handlers[eventName].Any(s => s.GetType() == handlerType))
         {
-            throw new ArgumentException($"Handler Type{handlerType.Name} already is registered for {eventName}, {nameof(handlerType)}");
+            throw new ArgumentException(
+                $"Handler Type {handlerType.Name} already is registered for '{eventName}'", nameof(handlerType));
         }
+
         _handlers[eventName].Add(handlerType);
 
-        StartBasicConsume<T>();
+        await StartBasicConsume<T>();
     }
 
-    private void StartBasicConsume<T>() where T : Event
+    private async Task StartBasicConsume<T>() where T : Event
     {
-        var factory = new ConnectionFactory()
-        {
-            HostName = "localhost",
-            DispatchConsumersAsync = true,
-        };
+        var factory = new ConnectionFactory { HostName = "localhost" };
+        var connection = await factory.CreateConnectionAsync();
+        var channel = await connection.CreateChannelAsync();
 
-        using (var connection = factory.CreateConnection())
-        using (var channel = connection.CreateModel())
-        {
-            var eventName =typeof(T).Name;
+        var eventName = typeof(T).Name;
 
-            channel.QueueDeclare(
-                queue: eventName,
-                durable: false,
-                exclusive: false,
-                autoDelete: false,
-                arguments: null
-            );
+        await channel.QueueDeclareAsync(eventName, false, false, false, null);
 
-            var consumer = new AsyncEventingBasicConsumer(channel);
-            consumer.Received += Consumer_Received;
-            channel.BasicConsume(eventName, true,consumer);
-        }
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += Consumer_Received;
+
+        await channel.BasicConsumeAsync(eventName, true, consumer);
     }
 
     private async Task Consumer_Received(object sender, BasicDeliverEventArgs e)
     {
         var eventName = e.RoutingKey;
-        var message = Encoding.UTF8.GetString(e.Body);
+        var message = Encoding.UTF8.GetString(e.Body.ToArray());
+
         try
         {
-            await ProcessEvent(eventName, message).ConfigureAwait(false);
+            await ProcessEvent(eventName, message);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-
-            throw;
         }
     }
 
@@ -135,8 +114,8 @@ public sealed class RabbitmqBus : IEventBus
                 if (handler == null) continue;
                 var eventType = _eventTypes.SingleOrDefault(t => t.Name == eventName);
                 var @event = JsonConvert.DeserializeObject(message, eventType);
-                var concretetype = typeof(IEventHandler<>).MakeGenericType(eventType);
-                await (Task)concretetype.GetMethod("Handle").Invoke(handler,new object[] {@event});
+                var conreteType = typeof(IEventHandler<>).MakeGenericType(eventType);
+                await (Task)conreteType.GetMethod("Handle").Invoke(handler, new object[] { @event });
             }
         }
     }
