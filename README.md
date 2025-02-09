@@ -4,9 +4,9 @@ Here is Two Microservice
 2. **Transfer**
 
 Each Microservice Folder structure is
-- **Api**(Controllers,Extensions)
+- **Api**(Controllers,Extensions)--->(MediatR,MediatR.Extensions.Microsoft.DependencyInjection,Microsoft.EntityFrameworkCore.InMemory
 - **Application**(Services,Interfaces,Models)
-- **Data**(Context,Repository)
+- **Data**(Context,Repository)----->(Microsoft.EntityFrameworkCore,Microsoft.EntityFrameworkCore.Design,Microsoft.EntityFrameworkCore.InMemory,Microsoft.EntityFrameworkCore.SqlServer,Microsoft.EntityFrameworkCore.Tools)
 - **Domain** (Command,CommandHandlers,Events,EventHandlers,IRepository,Models)
   
 **Banking API**
@@ -20,9 +20,9 @@ Each Microservice Folder structure is
 
 **And Three Libraries**
 
-1. MicroRabbit.Domain.Core 
-2. MicroRabbit.Infrastructure.Bus
-3. MicroRabbit.Infra.IoC
+1. MicroRabbit.Domain.Core (MediatR)
+2. MicroRabbit.Infrastructure.Bus(MediatR,Microsoft.Extensions.DependencyInjection,Newtonsoft.Json,RabbitMQ.Client)
+3. MicroRabbit.Infra.IoC(Microsoft.Extensions.DependencyInjection)
    
 **Message Publish,Consume and Subsribe Library**
 
