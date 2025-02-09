@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MicroRabbit.Banking.API.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class BankingController : ControllerBase
     {
        
