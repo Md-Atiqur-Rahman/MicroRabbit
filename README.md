@@ -10,33 +10,33 @@ Each Microservice Folder structure is
 - **Application**(Services,Interfaces,Models)
 - **Data**(Context,Repository)----->(Microsoft.EntityFrameworkCore,Microsoft.EntityFrameworkCore.Design,Microsoft.EntityFrameworkCore.InMemory,Microsoft.EntityFrameworkCore.SqlServer,Microsoft.EntityFrameworkCore.Tools)
 - **Domain** (Command,CommandHandlers,Events,EventHandlers,IRepository,Models)
-  
-**Banking API**
+
+<ins>**Banking API**</ins>
 - SendCommand is passed to the CommandHandler, which then publishes an event via RabbitMQ, automatically creating a queue.
 - ex: **CreateTransferCommand** --->**TransferCommandHandler** -->Publish **TransferCreatedEvent**
   
-**Transfer API:**
+<ins> **Transfer API:** </ins>
 - The published event is configured and subscribed to by the EventBus in Program.cs at line 37.
 - By subscribing, the EventHandler will be triggered and process messages from the queue.
 - that means: **TransferCreatedEvent** is subscribed on api that call **TransferEventHandler**
 
-**And Three Libraries**
+<ins> **And Three Libraries** </ins>
 
-1. MicroRabbit.Domain.Core (MediatR)
-2. MicroRabbit.Infrastructure.Bus(MediatR,Microsoft.Extensions.DependencyInjection,Newtonsoft.Json,RabbitMQ.Client)
-3. MicroRabbit.Infra.IoC(Microsoft.Extensions.DependencyInjection)
+-   MicroRabbit.Domain.Core (MediatR)
+-   MicroRabbit.Infrastructure.Bus(MediatR,Microsoft.Extensions.DependencyInjection,Newtonsoft.Json,RabbitMQ.Client)
+-   MicroRabbit.Infra.IoC(Microsoft.Extensions.DependencyInjection)
    
-**Message Publish,Consume and Subsribe Library**
+<ins> **Message Publish,Consume and Subsribe Library** </ins>
 
 **3. MicroRabbit.Infrastructure.Bus**
 
 - The RabbitMQBus class implements IEventBus and provides all essential functionalities, including SendCommand, Publish, Consume, and Process.
 
-**IEventBus and Command Library**
-
-this library contain core implementations, including
+<ins> **IEventBus and Command Library** </ins>
 
 **4. MicroRabbit.Domain.Core**
+
+this library contain core implementations, including
 
    - IEventBus
    - IEventHandler
@@ -45,10 +45,12 @@ this library contain core implementations, including
    - Message
 
      
-**Core Dependency Injection Library**
+<ins> **Core Dependency Injection Library** </ins>
 
 **5. MicroRabbit.Infra.IoC**
+
 All the necessary dependencies are registered within this library using Dependency Injection.
+
 - DependencyContainer
 
 **And lastly call from Ui**
